@@ -1,0 +1,150 @@
+---
+title: "Movie Recommendation System"
+author: "Vincent Katunga-Phiri"
+date: "2024-12-09"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r eval=FALSE, include=FALSE}
+#Clear memory and objects from workspace
+rm(list=ls())
+gc()
+
+#Load Required libraries
+if(!require(pacman)) {
+  install.packages("pacman", repos = "https://cran.r-project.org")
+  library(pacman)
+}
+
+if(!require(tidyverse)) install.packages("tidyverse", repos = "http://cran.us.r-project.org")
+if(!require(lubridate)) install.packages("lubridate", repos = "http://cran.us.r-project.org")
+if(!require(caret)) install.packages("caret", repos = "http://cran.us.r-project.org")
+if(!require(ggplot2)) install.packages("ggplot2", repos = "http://cran.us.r-project.org")
+if(!require(knitr)) install.packages("knitr", repos = "http://cran.us.r-project.org")
+if(!require(data.table)) install.packages("data.table", repos = "http://cran.us.r-project.org")
+
+pacman::p_load(tidyverse, lubridate, caret, ggplot2, knitr, data.table)
+
+#LOAD MOVIELENS DATASET
+# MovieLens 10M dataset:
+# https://grouplens.org/datasets/movielens/10m/
+# http://files.grouplens.org/datasets/movielens/ml-10m.zip
+
+dl <- tempfile()
+download.file("http://files.grouplens.org/datasets/movielens/ml-10m.zip", dl)
+
+ratings <- fread(text = gsub("::", "\t", readLines(unzip(dl, "ml-10M100K/ratings.dat"))),
+                 col.names = c("userId", "movieId", "rating", "timestamp"))
+
+movies <- str_split_fixed(readLines(unzip(dl, "ml-10M100K/movies.dat")), "\\::", 3)
+colnames(movies) <- c("movieId", "title", "genres")
+
+# if using R 4.0 or later:
+movies <- as.data.frame(movies) %>% mutate(movieId = as.numeric(movieId),
+                                           title = as.character(title),
+                                           genres = as.character(genres))
+
+
+movielens <- left_join(ratings, movies, by = "movieId")
+
+# Validation set will be 10% of MovieLens data
+set.seed(1, sample.kind="Rounding") # if using R 3.5 or earlier, use `set.seed(1)`
+test_index <- createDataPartition(y = movielens$rating, times = 1, p = 0.1, list = FALSE)
+edx <- movielens[-test_index,]
+temp <- movielens[test_index,]
+
+# Make sure userId and movieId in validation set are also in edx set
+validation <- temp %>% 
+  semi_join(edx, by = "movieId") %>%
+  semi_join(edx, by = "userId")
+
+# Add rows removed from validation set back into edx set
+removed <- anti_join(temp, validation)
+edx <- rbind(edx, removed)
+
+rm(dl, ratings, movies, test_index, temp, movielens, removed)
+```
+
+## Introduction
+
+This project aims to create a movie recommendation system using the MovieLens 10M dataset. The system aims to predict the ratings a user would give to movies which have not yet been rated. The model's performance was assessed using Root Mean Squared Error (RMSE), a metric frequently used for model fitting, validation, selection, comparison, and forecasting evaluation. (Karunasingha, 2022). According to (Harper & Konstan, 2015), the MovieLens datasets, first published in 1998, document individuals' movie preferences. He further states that these preferences are denoted as tuples, with each tuple indicating a user's rating (on a scale of 0 to 5 stars) for a film at a particular moment. The ratings were obtained via the MovieLens website, a recommendation system that prompts users to provide ratings. 
+
+The project will include several essential steps, including the methods section, which will describe the process of developing the recommendation system. This section will address the machine learning methodologies utilised, the data cleaning processes, and the data exploration processes, along with an interpretation of the insights derived from each exploration. The model development methodology will also be addressed. The results section will summarise the model's outcomes and performance metrics using the RMSE. The conclusion section will summarise the project, emphasising its limitations and prospective avenues for future research.
+
+## Methods
+
+### Dataset Description
+The MovieLens 10M dataset is comprised of 9000055 observations with just 6 variable names;
+userId: A unique identifier for each user in the dataset. A user can have multiple occasions where they made a movie rating.
+movieId: A unique identifier for each movie in the dataset.
+rating: A numeric value for rating a movie by a user. The rating is between 0 to 5.
+timestamp: A timestamp of when the rating was done.
+title: Movie title.
+genres: Movie genre
+
+```{r explore, echo=FALSE}
+str(edx)
+```
+Further to this, it can be noted that mean movie rating from this dataset is 3.512. 0.5 being the minimum movie rating and 5.0 the maximum rating of a movie. 
+
+```{r explore2, echo=FALSE}
+summary(edx)
+```
+The below table is visual representation of the first 6 rows of the dataset with the variable names with the values of the first six rows. Looking at this, it is evident that the data needs to go through a data cleaning and transformation process. For example, convert the timestamp variable to a date format, create a new column that extracts the movie release year
+
+```{r explore3, echo=FALSE}
+head(edx)
+```
+```{r explore4, echo=FALSE}
+sum(is.na(edx))
+```
+###Data Cleaning and Preprocessing
+Firstly, `timestamp` variable is in numeric format. To get a human readable `timestamp`, lubridate package was used to convert the variable and extract the year from the converted variable and store the values in a new variable called `rating_year`. Secondly, almost all the movie titles have a the year the movie was released. The release year was extracted from the title and stored in in a new variable called `year_released`.
+
+```{r clean1, include=FALSE}
+#Clean the timestamp variable and extract the year out of the date
+edx <- edx %>%
+  mutate(timestamp = as_date(timestamp)) %>% 
+  mutate(rating_year = year(timestamp))
+```
+
+```{r}
+#Extract the year from the movie title
+edx <- edx %>%
+  mutate(
+    year_released = str_extract(title, "\\(\\d{4}\\)"), 
+    year_released = ifelse(!is.na(movieyear), as.numeric(str_extract(year_released, "\\d{4}")), NA)) 
+```
+
+
+
+
+
+
+###Explatory Analysis
+Figure 1.0 illustrates the frequency of each rating in the dataset. The minimum movie rating is 0.5, while the maximum is 5. The majority of the films have received a rating of 4, followed by 3, and then 5.
+```{r explore5, echo=FALSE, fig.cap=}
+ggplot(edx) +
+  aes(x = rating) +
+  geom_histogram(bins = 10L, fill = "#0C4C8A") +
+  labs(title = "Distribution of Movie Ratings") +
+  theme_minimal() +
+  theme(plot.title = element_text(size = 16L, face = "bold"))
+```
+```{r, explore6}
+
+```
+
+
+
+
+## References
+1. Harper, F. M., & Konstan, J. A. (2015). The movielens datasets: History and context. Acm Transactions on Interactive Intelligent Systems (Tiis), 5(4), 1–19.
+
+2. Karunasingha, D. S. K. (2022). Root mean square error or mean absolute error? Use their ratio as well. Information Sciences, 585, 609–629. https://doi.org/10.1016/j.ins.2021.11.036
+
+

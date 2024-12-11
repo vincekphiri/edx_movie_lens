@@ -1,0 +1,29 @@
+---
+title: "MovieRecommendation"
+author: "Vincent Katunga-Phiri"
+date: "2024-12-10"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+## Introduction
+
+This project aims to create a movie recommendation system using the MovieLens 10M dataset. The system aims to predict the ratings a user would give to movies which have not yet been rated. The model's performance was assessed using Root Mean Squared Error (RMSE), a metric frequently used for model fitting, validation, selection, comparison, and forecasting evaluation. (Karunasingha, 2022). According to (Harper & Konstan, 2015), the MovieLens datasets, first published in 1998, document individuals' movie preferences. He further states that these preferences are denoted as tuples, with each tuple indicating a user's rating (on a scale of 0 to 5 stars) for a film at a particular moment. The ratings were obtained via the MovieLens website, a recommendation system that prompts users to provide ratings. 
+
+The project will include several essential steps, including the methods section, which will describe the process of developing the recommendation system. This section will address the machine learning methodologies utilised, the data cleaning processes, and the data exploration processes, along with an interpretation of the insights derived from each exploration. The model development methodology will also be addressed. The results section will summarise the model's outcomes and performance metrics using the RMSE. The conclusion section will summarise the project, emphasising its limitations and prospective avenues for future research.
+
+## Methods
+
+### Dataset Description
+Below is a description of the MovieLens 10M dataset.
+
+The dataset is comprised of 9000055 observations with just 6 variable names (userId, movieId, rating, timestamp, title and genres). 
+
+```{r}
+str(sampled_data)
+```
+
+
+
